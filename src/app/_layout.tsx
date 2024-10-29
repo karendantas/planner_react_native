@@ -1,4 +1,6 @@
-import "@/styles/global.css"
+import "@/styles/global.css";
+import "@/utils/dayjsLocaleConfig";
+
 import { Loading } from "@/components/loading";
 
 import {SafeAreaView, StatusBar} from 'react-native';
