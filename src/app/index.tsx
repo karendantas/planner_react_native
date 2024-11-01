@@ -15,6 +15,9 @@ import { Modal } from "@/components/modal";
 import { Calendar } from "@/components/calendar";
 import dayjs from "dayjs";
 import { GuestEmail } from "@/components/email";
+import { tripStorage } from "@/storage/trip";
+import { router, useRouter } from "expo-router";
+import { tripServer } from "@/server/trip-server";
 
 enum StepForm {
     TRIP_DETAIL = 1,
@@ -27,6 +30,9 @@ enum MODAL {
     GUESTS = 2
 }
 export default function Index (){
+    //LOADING
+    const [isCreatingTrip, setIsCreatingTrip] = useState(false);
+
     //DATA
     const [stepForm, setStepForm] =  useState(StepForm.TRIP_DETAIL);
     const [selectedDates, setSelectedDates] = useState({} as DatesSelected);
@@ -49,6 +55,18 @@ export default function Index (){
         if (stepForm === StepForm.TRIP_DETAIL){
             return setStepForm(StepForm.ADD_EMAIL)
         }
+
+        //verificando se o usuario quer mesmo cirar a viagem
+        Alert.alert("Criar viagem", "Confirmar viagem?", [
+            {
+                text: "Não",
+                style: "cancel"
+            },
+            {
+                text: "Sim",
+                onPress: createTrip,
+            }
+        ])
     }
 
     function handleOpenCalendarModal(){
@@ -87,6 +105,45 @@ export default function Index (){
         setSelectedDates(dates)
     }
 
+    //guardando id da viagem e jogando no storage
+    async function saveTrip(tripId: string){
+        try {
+            await tripStorage.save(tripId)
+            router.navigate({
+                pathname: './trip',
+                params: { tripId }
+            })
+        } catch (error) {
+            Alert.alert("Viagem", "falha em salvar o id da viagem")
+            console.log(error)
+        }
+    }
+
+
+    //criando a viagem
+    async function createTrip (){
+        try {
+            setIsCreatingTrip(true)
+            console.log('TESTE')
+            const newTrip = await tripServer.create({
+                destination,
+                starts_at: dayjs(selectedDates.startsAt?.dateString).toString(),
+                ends_at: dayjs(selectedDates.endsAt?.dateString).toString(),
+                emails_to_invite: guestsEmail,
+            })
+            console.log('rwsae1')
+            Alert.alert("Nova viagem", "Viagem criada com sucesso!", [
+                {
+                    text: "OK, continuar.",
+                    onPress: () => saveTrip(newTrip.tripdId)
+                    
+                }
+            ])
+        } catch (error) {
+            console.log(error)
+            setIsCreatingTrip(false)
+        }
+    }
     return (
         <View className="flex-1 justify-center items-center px-5">
             <Image 
@@ -154,7 +211,7 @@ export default function Index (){
                     </Input>
                 </>
                 }
-                <Button onPress={handleNextStepForm}>
+                <Button onPress={handleNextStepForm} isLoading = {isCreatingTrip}>
                     <Button.title> 
                         { stepForm === StepForm.TRIP_DETAIL 
                             ? "Continuar" 
